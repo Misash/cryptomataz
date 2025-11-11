@@ -11,7 +11,7 @@ class AgentState(TypedDict):
     keys: Dict[str, Any]
 
 
-async def weekly_content_supervisor(topic_context: str):
+async def supervisor_agent(topic_context: str):
     """
     Multi-agent system for generating weekly viral Twitter content.
     

@@ -1,13 +1,13 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import ValidationError
 
-from src.controller.agents.supervisor_agent import weekly_content_supervisor
-from src.model.routes import WeeklyContentRequest
+from src.controller.agents.supervisor_agent import supervisor_agent
+from src.model.routes import SupervisorAgentRequest
 
 router = APIRouter()
 
-@router.post("/weekly-content-generator/")
-async def generate_weekly_content(request: WeeklyContentRequest):
+@router.post("/supervisor-agent/")
+async def supervisor_agent_endpoint(request: SupervisorAgentRequest):
     """
     Generate viral Twitter content for a full week based on a given topic.
     
@@ -19,7 +19,7 @@ async def generate_weekly_content(request: WeeklyContentRequest):
     Returns 14-21 optimized tweets (2-3 per day) ready to post.
     """
     try:
-        response = await weekly_content_supervisor(request.topic_context)
+        response = await supervisor_agent(request.topic_context)
         return {
             "success": True,
             "data": response
