@@ -9,5 +9,5 @@ async def healthcheck():
     return {
         "status": "OK",
         "timestamp": datetime.now().isoformat(),
-        "api_eduv_AI_version": "0.0.1.5",
+        "api_cryptomataz_version": "0.0.1",
     }
