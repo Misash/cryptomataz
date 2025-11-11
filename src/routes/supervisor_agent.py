@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import ValidationError
 
-from src.controller.agents.supervisor_agent import supervisor_agent, weekly_content_supervisor
-from src.model.routes import ExecutorAgentRequest, WeeklyContentRequest
+from src.controller.agents.supervisor_agent import weekly_content_supervisor
+from src.model.routes import WeeklyContentRequest
 
 router = APIRouter()
 
@@ -24,25 +24,6 @@ async def generate_weekly_content(request: WeeklyContentRequest):
             "success": True,
             "data": response
         }
-    except ValidationError as e:
-        print("Validation error:", e)
-        raise HTTPException(status_code=422, detail=str(e))
-    except Exception as e:
-        print("Exception:", e)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/supervisor-agent/")
-async def supervisor_agent_endpoint():
-    """
-    Legacy endpoint for backward compatibility.
-    
-    Note: This endpoint is deprecated. Use /weekly-content-generator/ for the new
-    multi-agent weekly content generation system.
-    """
-    try:
-        response = await supervisor_agent()
-        return response
     except ValidationError as e:
         print("Validation error:", e)
         raise HTTPException(status_code=422, detail=str(e))

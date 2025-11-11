@@ -3,38 +3,12 @@ from typing import TypedDict, Dict, Any
 
 from langgraph.graph import END, StateGraph, START
 
-from src.controller.chains.youtuber_agent import youtuber_agent
 from src.controller.chains.content_strategist_chain import content_strategist_agent
 from src.controller.chains.tweet_creator_chain import tweet_creator_agent
 from src.controller.chains.quality_optimizer_chain import quality_optimizer_agent
 
 class AgentState(TypedDict):
     keys: Dict[str, Any]
-
-
-async def supervisor_agent(newsletter_content):
-    """
-    Legacy supervisor agent for backward compatibility.
-    Uses the youtuber_agent for single tweet generation.
-    """
-    graph_builder = StateGraph(AgentState)
-    graph_builder.add_node("youtuber_agent",youtuber_agent)
-
-    graph_builder.add_edge(START,"youtuber_agent")
-    graph_builder.add_edge("youtuber_agent",END)
-
-    graph = graph_builder.compile()
-
-    final_state = await graph.ainvoke({
-        "keys": {
-            "newsletter_content": newsletter_content
-        }
-    })
-    
-    response = final_state["keys"]["response"]
-
- 
-    return response
 
 
 async def weekly_content_supervisor(topic_context: str):

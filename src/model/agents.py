@@ -5,10 +5,7 @@ class Tweet(BaseModel):
     tweet: str = Field(description="Tweet Post")
     type: str = Field(description="Field of Personal, Growth or Authority")
 
-class TweetGeneratorResponse(BaseModel):
-    tweets: List[Tweet] = Field(description="Tweet objects Array")
-
-# NEW MODELS FOR WEEKLY CONTENT GENERATION
+# MODELS FOR WEEKLY CONTENT GENERATION
 
 class DailyStrategy(BaseModel):
     day: str = Field(description="Day of the week (Monday, Tuesday, etc.)")
