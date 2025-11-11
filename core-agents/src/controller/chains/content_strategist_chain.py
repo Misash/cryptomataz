@@ -29,6 +29,8 @@ def content_strategist_agent(state):
         strategy = chain.invoke({"topic_context": topic_context})
         print(f"Strategist Tokens: {cb.total_tokens}")
     
+    print("weekly_strategie: ", strategy)
+    
     return {
         "keys": {
             "topic_context": topic_context,

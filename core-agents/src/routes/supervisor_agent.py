@@ -19,9 +19,10 @@ async def supervisor_agent_endpoint(request: SupervisorAgentRequest):
     Returns 14-21 optimized tweets (2-3 per day) ready to post.
     """
     try:
+        print("-- Supervisor Endpoint --")
+        print("topic_context:", request.topic_context)
         response = await supervisor_agent(request.topic_context)
         return {
-            "success": True,
             "data": response
         }
     except ValidationError as e:
