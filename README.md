@@ -1,30 +1,30 @@
-# Cryptomataz 🚀
+# Cryptomataz
 
 Viral content generation system for Twitter using multi-agent architecture with LangGraph and AI.
 
-## ✨ Features
+## Features
 
-- 🤖 **Multi-Agent System**: 3 specialized agents working in sequence
-- 📅 **Weekly Content**: Generates 14-21 optimized tweets for a complete week
-- 🎯 **Smart Strategy**: Cohesive planning with unique daily themes
-- 🔥 **Viral Optimization**: Powerful hooks, clear CTAs and engagement scores
-- 📊 **Analytics**: Token tracking and metrics per agent
+- **Multi-Agent System**: Three specialized agents working in sequence
+- **Weekly Content Generation**: Produces 14-21 optimized tweets for a complete week
+- **Strategic Planning**: Cohesive content strategy with unique daily themes
+- **Viral Optimization**: Engagement-focused hooks, clear CTAs, and performance scoring
+- **Analytics**: Token usage tracking and performance metrics per agent
 
-## 🏗️ Architecture
+## Architecture
 
-The system uses 3 specialized agents:
+The system consists of three specialized agents:
 
-1. **Content Strategist** 🎯: Creates the weekly strategy
-2. **Tweet Creator** ✍️: Generates viral tweets per day
-3. **Quality Optimizer** 🎨: Optimizes and refines content
+1. **Content Strategist**: Creates the weekly content strategy
+2. **Tweet Creator**: Generates viral tweets for each day
+3. **Quality Optimizer**: Optimizes and refines content quality
 
-## 📋 Requirements
+## Requirements
 
-- Python 3.11
+- Python 3.11+
 - OpenAI API Key
-- Dependencies in `requirements.txt`
+- Dependencies listed in `requirements.txt`
 
-## 🔧 Install Dependencies
+## Installation
 
 ```bash
 python3 -m venv .venv
@@ -32,7 +32,7 @@ source .venv/bin/activate
 pip3 install -r requirements.txt
 ```
 
-## 🚀 Run
+## Running the Application
 
 ```bash
 uvicorn src.main:app --reload
@@ -40,9 +40,10 @@ uvicorn src.main:app --reload
 
 The server will be available at `http://localhost:8000`
 
-## 🐳 Run with Docker Compose
+## Docker Deployment
 
 ### Start containers
+
 ```bash
 # Windows
 docker-compose up --build
@@ -52,10 +53,11 @@ docker compose up --build
 ```
 
 ### Stop containers
+
 ```bash
 # Windows
 docker-compose down
 
-# Linux 
+# Linux
 docker compose down
 ```
