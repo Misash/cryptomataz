@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 from src.routes import (
     status_check,
-    supervisor_agent_endpoint
+    supervisor_agent
 )
 
 load_dotenv()
@@ -12,4 +12,4 @@ app = FastAPI()
 
 
 app.include_router(status_check.router)
-app.include_router(supervisor_agent_endpoint.router)
+app.include_router(supervisor_agent.router)
