@@ -75,8 +75,8 @@ const Game = () => {
         // Map is 28x29 tiles, scale 2x, so positions are in pixels on scaled map
         gameState.characters = [
           createCharacter(670, 500, 'Strategist', '#FF6B6B', 0),      // Red
-          createCharacter(300, 510, 'Creator', '#F5A623', 1),        // Orange
-          createCharacter(650, 650, 'Optimizer', '#7ED321', 2),      // Green
+          createCharacter(200, 490, 'Creator', '#F5A623', 1),        // Orange
+          createCharacter(620, 635, 'Optimizer', '#7ED321', 2),      // Green
           createCharacter(500, 300, 'Supervisor Agent', '#4A90E2', 3), // Blue
         ];
 
@@ -551,7 +551,10 @@ const Game = () => {
       const distance = Math.sqrt(dx * dx + dy * dy);
       
       // Stop if close enough to target (within 60 pixels for Supervisor Agent, 5 for others)
-      const stopDistance = character.index === 3 ? 60 : 5; // Supervisor Agent stops further away
+      // For final position (-1), use smaller stop distance (10 pixels)
+      const isFinalPosition = character.index === 3 && gameState.currentInteractionTarget === -1;
+      const stopDistance = isFinalPosition ? 10 : (character.index === 3 ? 60 : 5);
+      
       if (distance < stopDistance) {
         character.velocityX = 0;
         character.velocityY = 0;
@@ -758,6 +761,15 @@ const Game = () => {
           { from: 3, to: 2, message: 'Please optimize the content!', delay: 0 },
           { from: 2, to: 3, message: 'I\'ll optimize it perfectly!', delay: 2000 },
         ];
+      } else if (targetIndex === -1) { // Final position - completion message
+        emojiSequence = [
+          { characterIndex: 3, emoji: '✅', delay: 0 }, // Supervisor Agent - Check mark
+          { characterIndex: 3, emoji: '🎉', delay: 500 }, // Supervisor Agent - Party
+          { characterIndex: 3, emoji: '👍', delay: 1000 }, // Supervisor Agent - Thumbs up
+        ];
+        messages = [
+          { from: 3, to: 3, message: 'It\'s done, thank you!', delay: 0 },
+        ];
       }
       
       // Add emojis with delays - store in gameState
@@ -815,21 +827,38 @@ const Game = () => {
       // Get next target from queue
       if (gameState.interactionQueue && gameState.interactionQueue.length > 0) {
         const nextTargetIndex = gameState.interactionQueue.shift();
-        const targetChar = gameState.characters[nextTargetIndex];
         
         console.log('Moving to next interaction:', nextTargetIndex, 'Queue remaining:', gameState.interactionQueue);
         
-        if (targetChar) {
-          gameState.currentInteractionTarget = nextTargetIndex;
-          // Set target position near the character (to the left side, 60 pixels away)
-          const offsetX = -60;
-          const offsetY = 0;
-          supervisorAgent.targetX = targetChar.x + targetChar.width / 2 + offsetX;
-          supervisorAgent.targetY = targetChar.y + targetChar.height / 2 + offsetY;
+        // Special case: -1 means final position (center bottom of map)
+        if (nextTargetIndex === -1) {
+          gameState.currentInteractionTarget = -1;
+          // Set target to center bottom of map (the final path area)
+          // Looking at the map, the bottom center path is around column 13-14, row 26-27
+          const TILE_SIZE = 16;
+          const SCALE = 2;
+          const finalTileX = 13; // Center column
+          const finalTileY = 26; // Bottom area of map
+          supervisorAgent.targetX = finalTileX * (TILE_SIZE * SCALE) + (TILE_SIZE * SCALE) / 2;
+          supervisorAgent.targetY = finalTileY * (TILE_SIZE * SCALE) + (TILE_SIZE * SCALE) / 2;
           supervisorAgent.autoMove = true;
-          console.log('Supervisor Agent target set:', supervisorAgent.targetX, supervisorAgent.targetY);
+          console.log('Supervisor Agent moving to final position:', supervisorAgent.targetX, supervisorAgent.targetY);
         } else {
-          console.log('Target character not found:', nextTargetIndex);
+          // Regular character target
+          const targetChar = gameState.characters[nextTargetIndex];
+          
+          if (targetChar) {
+            gameState.currentInteractionTarget = nextTargetIndex;
+            // Set target position near the character (to the left side, 60 pixels away)
+            const offsetX = -60;
+            const offsetY = 0;
+            supervisorAgent.targetX = targetChar.x + targetChar.width / 2 + offsetX;
+            supervisorAgent.targetY = targetChar.y + targetChar.height / 2 + offsetY;
+            supervisorAgent.autoMove = true;
+            console.log('Supervisor Agent target set:', supervisorAgent.targetX, supervisorAgent.targetY);
+          } else {
+            console.log('Target character not found:', nextTargetIndex);
+          }
         }
       } else {
         // No more interactions, reset
@@ -1013,9 +1042,9 @@ const Game = () => {
     const strategist = gameState.characters[0]; // Strategist index
     
     if (supervisorAgent && strategist) {
-      // Set up interaction queue: Strategist -> Creator -> Optimizer
-      // Start with Strategist (0), then queue Creator (1) and Optimizer (2)
-      gameState.interactionQueue = [1, 2]; // Only queue remaining targets (Creator, Optimizer)
+      // Set up interaction queue: Strategist -> Creator -> Optimizer -> Final Position
+      // Start with Strategist (0), then queue Creator (1), Optimizer (2), and Final Position (-1)
+      gameState.interactionQueue = [1, 2, -1]; // Queue: Creator, Optimizer, Final Position
       gameState.currentInteractionTarget = 0; // Start with Strategist
       
       // Set target to a position near Strategist (to the left side, 60 pixels away)
