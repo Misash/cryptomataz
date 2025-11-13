@@ -59,6 +59,8 @@
 }
 
 .game-canvas {
+  width: 896px;
+  height: 928px;
   border: 4px solid rgba(255, 255, 255, 0.2);
   border-radius: 15px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -73,7 +75,7 @@
 
 .game-footer {
   margin-top: 30px;
-  max-width: 1024px;
+  max-width: 896px;
   width: 100%;
   animation: slideUp 1s ease-out 0.3s both;
 }
@@ -148,10 +150,14 @@
   }
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 950px) {
   .game-canvas {
     width: 100%;
     height: auto;
+  }
+  
+  .game-footer {
+    max-width: 100%;
   }
 }
 

@@ -4,13 +4,18 @@ A React + Vite application featuring an interactive canvas-based game showcasing
 
 ## Features
 
-- **Canvas-based Game**: Built with HTML5 Canvas for smooth 2D rendering
+- **Canvas-based Game**: Built with HTML5 Canvas for smooth 2D rendering (896x928px)
+- **Original Ninja-Adventure Map**: Using the exact map from the ninja-adventure game
+  - 28x29 tile grid with complete terrain layout
+  - Multiple layers: Terrain, Trees, and Houses
+  - Includes paths, grass, houses, trees, and decorative elements
+  - Optimized rendering with pre-rendered map canvas
 - **Three Playable Characters with Unique Colors**: 
   - 🎯 **Strategist** - Blue tinted character - Content Strategy Master
   - ✍️ **Creator** - Orange tinted character - Tweet Generation Expert  
   - ⚡ **Optimizer** - Green tinted character - Quality Enhancement Specialist
 - **Animated Sprites with Color Tinting**: Character animations using sprite sheets from ninja-adventure with dynamic color tinting system
-- **Interactive Environment**: Terrain and decorations from ninja-adventure assets
+- **Pixel-Perfect Rendering**: Crisp pixel art with proper scaling (3x) and no smoothing
 - **Character Switching**: Control different characters using number keys (1, 2, 3)
 
 ## Controls
