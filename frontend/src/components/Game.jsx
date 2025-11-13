@@ -28,6 +28,8 @@ const Game = () => {
     conversationActive: false,
     activeEmojis: [], // Store emojis in gameState for access in game loop
     chatMessages: [], // Store messages in gameState for access in game loop
+    interactionQueue: [], // Queue of interactions for Supervisor Agent
+    currentInteractionTarget: null, // Current target character index for interaction
   });
 
   useEffect(() => {
@@ -105,6 +107,8 @@ const Game = () => {
       autoMove: false, // Flag for automatic movement
       targetX: null, // Target X position for auto movement
       targetY: null, // Target Y position for auto movement
+      pathTarget: null, // Intermediate pathfinding target
+      pathUpdateCounter: 0, // Counter for path updates
       sprites: {
         walkDown: { x: 0, y: 0, frameCount: 4 },
         walkUp: { x: 16, y: 0, frameCount: 4 },
@@ -424,6 +428,113 @@ const Game = () => {
       ctx.restore();
     };
 
+    // Pathfinding helper functions
+    // Check if a tile is walkable (path tile with no obstacles)
+    const isWalkableTile = (tileX, tileY) => {
+      if (tileX < 0 || tileX >= l_Terrain[0].length || tileY < 0 || tileY >= l_Terrain.length) {
+        return false;
+      }
+      
+      // Check terrain layer - walkable terrain tiles (paths, bridges, etc.)
+      const terrainTile = l_Terrain[tileY][tileX];
+      const walkableTerrainTiles = [
+        1, 2, 3, 29, 30, 31, 34, 35, 57, 58, 59, 62, 63, 113, 142, 144,
+        1653, 1654, 1655, 1681, 1682, 1683, 1709, 1710, 1711, 1714, 1715,
+        1686, 1687
+      ];
+      const isPath = walkableTerrainTiles.includes(terrainTile);
+      
+      // Check if there's a tree (non-zero value in Trees layer means obstacle)
+      const hasTree = l_Trees[tileY] && l_Trees[tileY][tileX] !== 0;
+      
+      // Check if there's a house (non-zero value in Houses layer means obstacle)
+      const hasHouse = l_Houses[tileY] && l_Houses[tileY][tileX] !== 0;
+      
+      // Walkable if it's a path tile and has no obstacles
+      return isPath && !hasTree && !hasHouse;
+    };
+
+    // Convert pixel coordinates to tile coordinates
+    const pixelToTile = (pixelX, pixelY) => {
+      const TILE_SIZE = 16;
+      const SCALE = 2;
+      const TILE_PIXELS = TILE_SIZE * SCALE; // 32px per tile
+      return {
+        tileX: Math.floor(pixelX / TILE_PIXELS),
+        tileY: Math.floor(pixelY / TILE_PIXELS)
+      };
+    };
+
+    // Convert tile coordinates to pixel coordinates (center of tile)
+    const tileToPixel = (tileX, tileY) => {
+      const TILE_SIZE = 16;
+      const SCALE = 2;
+      const TILE_PIXELS = TILE_SIZE * SCALE; // 32px per tile
+      return {
+        x: tileX * TILE_PIXELS + TILE_PIXELS / 2,
+        y: tileY * TILE_PIXELS + TILE_PIXELS / 2
+      };
+    };
+
+    // Simple greedy pathfinding: find next walkable tile towards target
+    const findNextWalkableStep = (startX, startY, targetX, targetY) => {
+      const startTile = pixelToTile(startX, startY);
+      const targetTile = pixelToTile(targetX, targetY);
+      
+      // If already at target tile, return target position
+      if (startTile.tileX === targetTile.tileX && startTile.tileY === targetTile.tileY) {
+        return { x: targetX, y: targetY };
+      }
+      
+      // Directions to check (4-way movement)
+      const directions = [
+        { x: 0, y: -1 },  // Up
+        { x: 0, y: 1 },   // Down
+        { x: -1, y: 0 },  // Left
+        { x: 1, y: 0 }    // Right
+      ];
+      
+      // Find all walkable neighbors and calculate their distance to target
+      const walkableNeighbors = directions
+        .map(dir => {
+          const nextTileX = startTile.tileX + dir.x;
+          const nextTileY = startTile.tileY + dir.y;
+          
+          if (isWalkableTile(nextTileX, nextTileY)) {
+            const nextPixel = tileToPixel(nextTileX, nextTileY);
+            const distToTarget = Math.sqrt(
+              Math.pow(targetX - nextPixel.x, 2) + Math.pow(targetY - nextPixel.y, 2)
+            );
+            return { nextTileX, nextTileY, nextPixel, distToTarget };
+          }
+          return null;
+        })
+        .filter(n => n !== null);
+      
+      // If no walkable neighbors, search in expanding radius
+      if (walkableNeighbors.length === 0) {
+        for (let radius = 1; radius <= 5; radius++) {
+          for (let dx = -radius; dx <= radius; dx++) {
+            for (let dy = -radius; dy <= radius; dy++) {
+              if (Math.abs(dx) === radius || Math.abs(dy) === radius) {
+                const nextTileX = startTile.tileX + dx;
+                const nextTileY = startTile.tileY + dy;
+                if (isWalkableTile(nextTileX, nextTileY)) {
+                  return tileToPixel(nextTileX, nextTileY);
+                }
+              }
+            }
+          }
+        }
+        // Fallback: stay in current position
+        return { x: startX, y: startY };
+      }
+      
+      // Sort by distance to target and pick the closest
+      walkableNeighbors.sort((a, b) => a.distToTarget - b.distToTarget);
+      return walkableNeighbors[0].nextPixel;
+    };
+
     // Handle automatic movement towards target
     const handleAutoMovement = (character) => {
       if (!character.autoMove || character.targetX === null || character.targetY === null) {
@@ -446,25 +557,61 @@ const Game = () => {
         character.velocityY = 0;
         character.autoMove = false;
         
-        // If Supervisor Agent reached Strategist, start conversation
-        if (character.index === 3) { // Supervisor Agent index
-          startConversation();
+        // If Supervisor Agent reached target, start conversation with current target
+        if (character.index === 3 && gameState.currentInteractionTarget !== null) {
+          startConversation(gameState.currentInteractionTarget);
         }
         return;
       }
       
-      // Calculate direction and set velocity
-      const normalizedDx = dx / distance;
-      const normalizedDy = dy / distance;
-      
-      character.velocityX = normalizedDx * character.speed;
-      character.velocityY = normalizedDy * character.speed;
-      
-      // Update facing direction based on movement
-      if (Math.abs(dx) > Math.abs(dy)) {
-        character.facing = dx > 0 ? 'right' : 'left';
+      // For Supervisor Agent (index 3), use pathfinding to avoid obstacles
+      if (character.index === 3) {
+        // Update pathfinding target periodically (every 15 frames)
+        if (!character.pathTarget || !character.pathUpdateCounter || character.pathUpdateCounter <= 0) {
+          const nextStep = findNextWalkableStep(centerX, centerY, targetX, targetY);
+          character.pathTarget = nextStep;
+          character.pathUpdateCounter = 15; // Update path every 15 frames
+        } else {
+          character.pathUpdateCounter--;
+        }
+        
+        // Move towards the pathfinding intermediate target
+        const pathDx = character.pathTarget.x - centerX;
+        const pathDy = character.pathTarget.y - centerY;
+        const pathDistance = Math.sqrt(pathDx * pathDx + pathDy * pathDy);
+        
+        if (pathDistance > 5) {
+          const normalizedDx = pathDx / pathDistance;
+          const normalizedDy = pathDy / pathDistance;
+          
+          character.velocityX = normalizedDx * character.speed;
+          character.velocityY = normalizedDy * character.speed;
+          
+          // Update facing direction
+          if (Math.abs(pathDx) > Math.abs(pathDy)) {
+            character.facing = pathDx > 0 ? 'right' : 'left';
+          } else {
+            character.facing = pathDy > 0 ? 'down' : 'up';
+          }
+        } else {
+          // Reached intermediate target, recalculate path
+          character.pathTarget = null;
+          character.pathUpdateCounter = 0;
+        }
       } else {
-        character.facing = dy > 0 ? 'down' : 'up';
+        // For other characters, use direct movement
+        const normalizedDx = dx / distance;
+        const normalizedDy = dy / distance;
+        
+        character.velocityX = normalizedDx * character.speed;
+        character.velocityY = normalizedDy * character.speed;
+        
+        // Update facing direction based on movement
+        if (Math.abs(dx) > Math.abs(dy)) {
+          character.facing = dx > 0 ? 'right' : 'left';
+        } else {
+          character.facing = dy > 0 ? 'down' : 'up';
+        }
       }
     };
 
@@ -513,23 +660,23 @@ const Game = () => {
 
       // Only handle manual input if auto movement is not active
       if (!character.autoMove) {
-        character.velocityX = 0;
-        character.velocityY = 0;
+      character.velocityX = 0;
+      character.velocityY = 0;
 
-        if (gameState.keys['ArrowRight'] || gameState.keys['d']) {
-          character.velocityX = character.speed;
-          character.facing = 'right';
-        } else if (gameState.keys['ArrowLeft'] || gameState.keys['a']) {
-          character.velocityX = -character.speed;
-          character.facing = 'left';
-        }
+      if (gameState.keys['ArrowRight'] || gameState.keys['d']) {
+        character.velocityX = character.speed;
+        character.facing = 'right';
+      } else if (gameState.keys['ArrowLeft'] || gameState.keys['a']) {
+        character.velocityX = -character.speed;
+        character.facing = 'left';
+      }
 
-        if (gameState.keys['ArrowUp'] || gameState.keys['w']) {
-          character.velocityY = -character.speed;
-          character.facing = 'up';
-        } else if (gameState.keys['ArrowDown'] || gameState.keys['s']) {
-          character.velocityY = character.speed;
-          character.facing = 'down';
+      if (gameState.keys['ArrowUp'] || gameState.keys['w']) {
+        character.velocityY = -character.speed;
+        character.facing = 'up';
+      } else if (gameState.keys['ArrowDown'] || gameState.keys['s']) {
+        character.velocityY = character.speed;
+        character.facing = 'down';
         }
       }
     };
@@ -565,8 +712,8 @@ const Game = () => {
       requestAnimationFrame(gameLoop);
     };
 
-    // Start conversation between characters
-    const startConversation = () => {
+    // Start conversation between Supervisor Agent and target character
+    const startConversation = (targetIndex) => {
       if (gameState.conversationActive) return;
       gameState.conversationActive = true;
       
@@ -574,23 +721,44 @@ const Game = () => {
       const emojiDuration = 3000; // 3 seconds per emoji
       const messageDuration = 4000; // 4 seconds per message
       
-      // Define emojis for each character
-      const emojiSequence = [
-        { characterIndex: 3, emoji: '💰', delay: 0 }, // Supervisor Agent - Money
-        { characterIndex: 0, emoji: '💼', delay: 500 }, // Strategist - Briefcase (work)
-        { characterIndex: 1, emoji: '✍️', delay: 1000 }, // Creator - Writing
-        { characterIndex: 2, emoji: '✨', delay: 1500 }, // Optimizer - Sparkles
-        { characterIndex: 3, emoji: '📊', delay: 2000 }, // Supervisor Agent - Chart
-        { characterIndex: 0, emoji: '🎯', delay: 2500 }, // Strategist - Target
-      ];
+      // Define conversations based on target character
+      let emojiSequence = [];
+      let messages = [];
       
-      // Define chat messages
-      const messages = [
-        { from: 3, to: 0, message: 'Let\'s discuss the strategy!', delay: 0 },
-        { from: 0, to: 3, message: 'Perfect! Here\'s my plan...', delay: 2000 },
-        { from: 1, to: 0, message: 'I can create content for this!', delay: 4000 },
-        { from: 2, to: 1, message: 'I\'ll optimize it!', delay: 6000 },
-      ];
+      if (targetIndex === 0) { // Strategist
+        emojiSequence = [
+          { characterIndex: 3, emoji: '💰', delay: 0 }, // Supervisor Agent - Money
+          { characterIndex: 0, emoji: '💼', delay: 500 }, // Strategist - Briefcase (work)
+          { characterIndex: 3, emoji: '📊', delay: 1000 }, // Supervisor Agent - Chart
+          { characterIndex: 0, emoji: '🎯', delay: 1500 }, // Strategist - Target
+        ];
+        messages = [
+          { from: 3, to: 0, message: 'Let\'s discuss the strategy!', delay: 0 },
+          { from: 0, to: 3, message: 'Perfect! Here\'s my plan...', delay: 2000 },
+        ];
+      } else if (targetIndex === 1) { // Creator
+        emojiSequence = [
+          { characterIndex: 3, emoji: '📝', delay: 0 }, // Supervisor Agent - Memo
+          { characterIndex: 1, emoji: '✍️', delay: 500 }, // Creator - Writing
+          { characterIndex: 3, emoji: '✅', delay: 1000 }, // Supervisor Agent - Check
+          { characterIndex: 1, emoji: '📄', delay: 1500 }, // Creator - Page
+        ];
+        messages = [
+          { from: 3, to: 1, message: 'Time to create content!', delay: 0 },
+          { from: 1, to: 3, message: 'I\'ll create amazing content!', delay: 2000 },
+        ];
+      } else if (targetIndex === 2) { // Optimizer
+        emojiSequence = [
+          { characterIndex: 3, emoji: '🔍', delay: 0 }, // Supervisor Agent - Search
+          { characterIndex: 2, emoji: '✨', delay: 500 }, // Optimizer - Sparkles
+          { characterIndex: 3, emoji: '📈', delay: 1000 }, // Supervisor Agent - Chart
+          { characterIndex: 2, emoji: '🚀', delay: 1500 }, // Optimizer - Rocket
+        ];
+        messages = [
+          { from: 3, to: 2, message: 'Please optimize the content!', delay: 0 },
+          { from: 2, to: 3, message: 'I\'ll optimize it perfectly!', delay: 2000 },
+        ];
+      }
       
       // Add emojis with delays - store in gameState
       emojiSequence.forEach(({ characterIndex, emoji, delay }) => {
@@ -623,14 +791,51 @@ const Game = () => {
         }, delay);
       });
       
-      // Clear conversation after total duration
+      // Clear conversation after total duration and move to next target
       setTimeout(() => {
         gameState.conversationActive = false;
         gameState.activeEmojis = [];
         gameState.chatMessages = [];
         setActiveEmojis([]);
         setChatMessages([]);
-      }, 10000); // Total conversation duration: 10 seconds
+        
+        // Move to next interaction in queue
+        moveToNextInteraction();
+      }, 8000); // Total conversation duration: 8 seconds
+    };
+
+    // Move Supervisor Agent to next interaction target
+    const moveToNextInteraction = () => {
+      const supervisorAgent = gameState.characters[3];
+      if (!supervisorAgent) {
+        console.log('Supervisor Agent not found');
+        return;
+      }
+      
+      // Get next target from queue
+      if (gameState.interactionQueue && gameState.interactionQueue.length > 0) {
+        const nextTargetIndex = gameState.interactionQueue.shift();
+        const targetChar = gameState.characters[nextTargetIndex];
+        
+        console.log('Moving to next interaction:', nextTargetIndex, 'Queue remaining:', gameState.interactionQueue);
+        
+        if (targetChar) {
+          gameState.currentInteractionTarget = nextTargetIndex;
+          // Set target position near the character (to the left side, 60 pixels away)
+          const offsetX = -60;
+          const offsetY = 0;
+          supervisorAgent.targetX = targetChar.x + targetChar.width / 2 + offsetX;
+          supervisorAgent.targetY = targetChar.y + targetChar.height / 2 + offsetY;
+          supervisorAgent.autoMove = true;
+          console.log('Supervisor Agent target set:', supervisorAgent.targetX, supervisorAgent.targetY);
+        } else {
+          console.log('Target character not found:', nextTargetIndex);
+        }
+      } else {
+        // No more interactions, reset
+        console.log('No more interactions in queue');
+        gameState.currentInteractionTarget = null;
+      }
     };
 
     // Draw emojis above characters
@@ -801,13 +1006,19 @@ const Game = () => {
       return;
     }
 
-    // Activate automatic movement for Supervisor Agent to walk towards Strategist
+    // Activate automatic movement sequence for Supervisor Agent
+    // Sequence: Strategist (0) -> Creator (1) -> Optimizer (2)
     const gameState = gameStateRef.current;
     const supervisorAgent = gameState.characters[3]; // Supervisor Agent index
     const strategist = gameState.characters[0]; // Strategist index
+    
     if (supervisorAgent && strategist) {
+      // Set up interaction queue: Strategist -> Creator -> Optimizer
+      // Start with Strategist (0), then queue Creator (1) and Optimizer (2)
+      gameState.interactionQueue = [1, 2]; // Only queue remaining targets (Creator, Optimizer)
+      gameState.currentInteractionTarget = 0; // Start with Strategist
+      
       // Set target to a position near Strategist (to the left side, 60 pixels away)
-      // This ensures Supervisor Agent stops near but not on top of Strategist
       const offsetX = -60; // Stop to the left of Strategist
       const offsetY = 0; // Same vertical level
       supervisorAgent.targetX = strategist.x + strategist.width / 2 + offsetX;
@@ -862,52 +1073,52 @@ const Game = () => {
         
         {/* Right side: Input and Output */}
         <div className="game-controls-container">
-          {/* Supervisor Agent Input Section */}
-          <div className="supervisor-input-section">
-            <div className="input-container">
-              <label htmlFor="topic-context" className="input-label">
-                Supervisor Agent - Topic Context:
-              </label>
-              <div className="input-group">
-                <input
-                  id="topic-context"
-                  type="text"
-                  className="topic-input"
-                  placeholder="Enter topic or theme for weekly Twitter content (e.g., 'AI automation for small businesses')"
-                  value={topicContext}
-                  onChange={(e) => setTopicContext(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !loading) {
-                      handleRunSupervisorAgent();
-                    }
-                  }}
-                  disabled={loading}
-                />
-                <button
-                  className="run-button"
-                  onClick={handleRunSupervisorAgent}
-                  disabled={loading || !topicContext.trim()}
-                >
-                  {loading ? 'Running...' : 'Run'}
-                </button>
-              </div>
-              {error && (
-                <div className="error-message">
-                  ⚠️ {error}
-                </div>
-              )}
+        {/* Supervisor Agent Input Section */}
+        <div className="supervisor-input-section">
+          <div className="input-container">
+            <label htmlFor="topic-context" className="input-label">
+              Supervisor Agent - Topic Context:
+            </label>
+            <div className="input-group">
+              <input
+                id="topic-context"
+                type="text"
+                className="topic-input"
+                placeholder="Enter topic or theme for weekly Twitter content (e.g., 'AI automation for small businesses')"
+                value={topicContext}
+                onChange={(e) => setTopicContext(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !loading) {
+                    handleRunSupervisorAgent();
+                  }
+                }}
+                disabled={loading}
+              />
+              <button
+                className="run-button"
+                onClick={handleRunSupervisorAgent}
+                disabled={loading || !topicContext.trim()}
+              >
+                {loading ? 'Running...' : 'Run'}
+              </button>
             </div>
+            {error && (
+              <div className="error-message">
+                ⚠️ {error}
+              </div>
+            )}
           </div>
-          
-          {/* Supervisor Agent Output Section */}
-          <div className="supervisor-output-section">
+        </div>
+      
+      {/* Supervisor Agent Output Section */}
+        <div className="supervisor-output-section">
             {output ? (
               <>
-                <h2 className="output-title">Supervisor Agent Output</h2>
-                <div className="output-container">
-                  <pre className="output-content">
-                    {JSON.stringify(output, null, 2)}
-                  </pre>
+          <h2 className="output-title">Supervisor Agent Output</h2>
+          <div className="output-container">
+            <pre className="output-content">
+              {JSON.stringify(output, null, 2)}
+            </pre>
                 </div>
               </>
             ) : (
