@@ -67,9 +67,9 @@ const Game = () => {
         // Initialize four characters (one for each role) - positioned in the center area
         // Map is 28x29 tiles, scale 2x, so positions are in pixels on scaled map
         gameState.characters = [
-          createCharacter(200, 300, 'Strategist', '#FF6B6B', 0),      // Red
-          createCharacter(300, 300, 'Creator', '#F5A623', 1),        // Orange
-          createCharacter(400, 300, 'Optimizer', '#7ED321', 2),      // Green
+          createCharacter(670, 500, 'Strategist', '#FF6B6B', 0),      // Red
+          createCharacter(300, 510, 'Creator', '#F5A623', 1),        // Orange
+          createCharacter(650, 650, 'Optimizer', '#7ED321', 2),      // Green
           createCharacter(500, 300, 'Supervisor Agent', '#4A90E2', 3), // Blue
         ];
 
