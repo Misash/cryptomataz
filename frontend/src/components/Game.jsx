@@ -80,7 +80,7 @@ const Game = () => {
           createCharacter(500, 300, 'Supervisor Agent', '#4A90E2', 3), // Blue
         ];
 
-        // Start game loop
+
         gameState.lastTime = performance.now();
         gameLoop();
       } catch (error) {
@@ -560,6 +560,11 @@ const Game = () => {
         character.velocityY = 0;
         character.autoMove = false;
         
+        // Make Supervisor Agent face forward (down) when stopping
+        if (character.index === 3) {
+          character.facing = 'down';
+        }
+        
         // If Supervisor Agent reached target, start conversation with current target
         if (character.index === 3 && gameState.currentInteractionTarget !== null) {
           startConversation(gameState.currentInteractionTarget);
@@ -730,14 +735,17 @@ const Game = () => {
       
       if (targetIndex === 0) { // Strategist
         emojiSequence = [
-          { characterIndex: 3, emoji: '💰', delay: 0 }, // Supervisor Agent - Money
-          { characterIndex: 0, emoji: '💼', delay: 500 }, // Strategist - Briefcase (work)
+          { characterIndex: 3, emoji: '💼', delay: 0 }, // Supervisor Agent - Briefcase
+          { characterIndex: 0, emoji: '📋', delay: 500 }, // Strategist - Clipboard
           { characterIndex: 3, emoji: '📊', delay: 1000 }, // Supervisor Agent - Chart
           { characterIndex: 0, emoji: '🎯', delay: 1500 }, // Strategist - Target
+          { characterIndex: 3, emoji: '💰', delay: 2500 }, // Supervisor Agent - Payment
+          { characterIndex: 0, emoji: '💵', delay: 3000 }, // Strategist - Money received
         ];
         messages = [
           { from: 3, to: 0, message: 'Let\'s discuss the strategy!', delay: 0 },
           { from: 0, to: 3, message: 'Perfect! Here\'s my plan...', delay: 2000 },
+          { from: 3, to: 0, message: 'Great work! Here\'s your payment 💰', delay: 4500 },
         ];
       } else if (targetIndex === 1) { // Creator
         emojiSequence = [
@@ -745,10 +753,13 @@ const Game = () => {
           { characterIndex: 1, emoji: '✍️', delay: 500 }, // Creator - Writing
           { characterIndex: 3, emoji: '✅', delay: 1000 }, // Supervisor Agent - Check
           { characterIndex: 1, emoji: '📄', delay: 1500 }, // Creator - Page
+          { characterIndex: 3, emoji: '💰', delay: 2500 }, // Supervisor Agent - Payment
+          { characterIndex: 1, emoji: '💵', delay: 3000 }, // Creator - Money received
         ];
         messages = [
           { from: 3, to: 1, message: 'Time to create content!', delay: 0 },
           { from: 1, to: 3, message: 'I\'ll create amazing content!', delay: 2000 },
+          { from: 3, to: 1, message: 'Excellent! Here\'s your payment 💰', delay: 4500 },
         ];
       } else if (targetIndex === 2) { // Optimizer
         emojiSequence = [
@@ -756,10 +767,13 @@ const Game = () => {
           { characterIndex: 2, emoji: '✨', delay: 500 }, // Optimizer - Sparkles
           { characterIndex: 3, emoji: '📈', delay: 1000 }, // Supervisor Agent - Chart
           { characterIndex: 2, emoji: '🚀', delay: 1500 }, // Optimizer - Rocket
+          { characterIndex: 3, emoji: '💰', delay: 2500 }, // Supervisor Agent - Payment
+          { characterIndex: 2, emoji: '💵', delay: 3000 }, // Optimizer - Money received
         ];
         messages = [
           { from: 3, to: 2, message: 'Please optimize the content!', delay: 0 },
           { from: 2, to: 3, message: 'I\'ll optimize it perfectly!', delay: 2000 },
+          { from: 3, to: 2, message: 'Perfect! Here\'s your payment 💰', delay: 4500 },
         ];
       } else if (targetIndex === -1) { // Final position - completion message
         emojiSequence = [
