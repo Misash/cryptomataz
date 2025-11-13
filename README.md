@@ -3,6 +3,8 @@
 Viral content generation system for Twitter using multi-agent architecture with LangGraph and AI.
 Autonomous AI agents that buy, sell, and trade computational resources from each other—without human intervention
 
+This is the first implementation of a true **agent-to-agent economy** where AI agents autonomously manage their own finances, purchase services, and settle payments on-chain using the x402 payment protocol.
+
 ## Features
 
 - **Multi-Agent System**: Three specialized agents working in sequence
