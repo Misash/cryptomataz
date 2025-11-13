@@ -389,32 +389,6 @@ const Game = () => {
     // Draw character label
     const drawCharacterLabel = (character) => {
       ctx.save();
-      
-      // Draw selection indicator
-      if (character.index === selectedCharacter) {
-        ctx.strokeStyle = character.color;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(
-          character.x + character.width / 2,
-          character.y - 20,
-          8,
-          0,
-          Math.PI * 2
-        );
-        ctx.stroke();
-        
-        ctx.fillStyle = character.color;
-        ctx.beginPath();
-        ctx.arc(
-          character.x + character.width / 2,
-          character.y - 20,
-          5,
-          0,
-          Math.PI * 2
-        );
-        ctx.fill();
-      }
 
       // Draw name
       ctx.font = 'bold 14px Arial';
@@ -651,43 +625,6 @@ const Game = () => {
       character.y = Math.max(0, Math.min(canvas.height - character.height, character.y));
     };
 
-    // Handle input for selected character
-    const handleInput = () => {
-      const character = gameState.characters[selectedCharacter];
-      if (!character) return;
-
-      // If character has auto movement enabled, disable it when user takes control
-      if (character.autoMove && (gameState.keys['ArrowRight'] || gameState.keys['d'] || 
-          gameState.keys['ArrowLeft'] || gameState.keys['a'] || 
-          gameState.keys['ArrowUp'] || gameState.keys['w'] || 
-          gameState.keys['ArrowDown'] || gameState.keys['s'])) {
-        character.autoMove = false;
-        character.targetX = null;
-        character.targetY = null;
-      }
-
-      // Only handle manual input if auto movement is not active
-      if (!character.autoMove) {
-      character.velocityX = 0;
-      character.velocityY = 0;
-
-      if (gameState.keys['ArrowRight'] || gameState.keys['d']) {
-        character.velocityX = character.speed;
-        character.facing = 'right';
-      } else if (gameState.keys['ArrowLeft'] || gameState.keys['a']) {
-        character.velocityX = -character.speed;
-        character.facing = 'left';
-      }
-
-      if (gameState.keys['ArrowUp'] || gameState.keys['w']) {
-        character.velocityY = -character.speed;
-        character.facing = 'up';
-      } else if (gameState.keys['ArrowDown'] || gameState.keys['s']) {
-        character.velocityY = character.speed;
-        character.facing = 'down';
-        }
-      }
-    };
 
     // Game loop
     const gameLoop = () => {
@@ -701,8 +638,7 @@ const Game = () => {
       // Draw background
       drawBackground();
 
-      // Handle input and update characters
-      handleInput();
+      // Update characters
       gameState.characters.forEach(character => {
         updateCharacter(character, deltaTime);
         drawCharacter(character);
@@ -713,9 +649,6 @@ const Game = () => {
 
       // Draw chat messages
       drawChatMessages();
-
-      // Draw instructions
-      drawInstructions();
 
       requestAnimationFrame(gameLoop);
     };
@@ -996,51 +929,9 @@ const Game = () => {
       }
     };
 
-    // Draw instructions
-    const drawInstructions = () => {
-      ctx.save();
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.fillRect(10, 10, 300, 100);
-      
-      ctx.font = 'bold 16px Arial';
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'left';
-      ctx.fillText('Controls:', 20, 35);
-      
-      ctx.font = '14px Arial';
-      ctx.fillText('WASD / Arrow Keys - Move', 20, 60);
-      ctx.fillText('1, 2, 3, 4 - Switch Character', 20, 80);
-      ctx.fillText(`Active: ${gameState.characters[selectedCharacter]?.name}`, 20, 100);
-      
-      ctx.restore();
-    };
-
-    // Keyboard event handlers
-    const handleKeyDown = (e) => {
-      gameState.keys[e.key] = true;
-      
-      // Switch character
-      if (e.key === '1') setSelectedCharacter(0);
-      if (e.key === '2') setSelectedCharacter(1);
-      if (e.key === '3') setSelectedCharacter(2);
-      if (e.key === '4') setSelectedCharacter(3);
-    };
-
-    const handleKeyUp = (e) => {
-      gameState.keys[e.key] = false;
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
 
     initGame();
-
-    // Cleanup
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [selectedCharacter]);
+  }, []);
 
   // Handle Supervisor Agent API call
   const handleRunSupervisorAgent = async () => {
