@@ -59,12 +59,13 @@ const Game = () => {
         gameState.images.terrain = await loadImage(terrainSprite);
         gameState.images.decorations = await loadImage(decorationsSprite);
 
-        // Initialize three characters (one for each role) - positioned in the center area
+        // Initialize four characters (one for each role) - positioned in the center area
         // Map is 28x29 tiles, scale 2x, so positions are in pixels on scaled map
         gameState.characters = [
-          createCharacter(250, 300, 'Strategist', '#4A90E2', 0),
-          createCharacter(350, 300, 'Creator', '#F5A623', 1),
-          createCharacter(450, 300, 'Optimizer', '#7ED321', 2),
+          createCharacter(200, 300, 'Strategist', '#FF6B6B', 0),      // Red
+          createCharacter(300, 300, 'Creator', '#F5A623', 1),        // Orange
+          createCharacter(400, 300, 'Optimizer', '#7ED321', 2),      // Green
+          createCharacter(500, 300, 'Supervisor Agent', '#4A90E2', 3), // Blue
         ];
 
         // Start game loop
@@ -308,14 +309,17 @@ const Game = () => {
       // Get RGB values for tint color
       let tintR, tintG, tintB;
       switch (character.index) {
-        case 0: // Strategist - Blue
-          tintR = 74; tintG = 144; tintB = 226;
+        case 0: // Strategist - Red
+          tintR = 255; tintG = 107; tintB = 107;
           break;
         case 1: // Creator - Orange
           tintR = 245; tintG = 166; tintB = 35;
           break;
         case 2: // Optimizer - Green
           tintR = 126; tintG = 211; tintB = 33;
+          break;
+        case 3: // Supervisor Agent - Blue
+          tintR = 74; tintG = 144; tintB = 226;
           break;
         default:
           tintR = 255; tintG = 255; tintB = 255;
@@ -493,7 +497,7 @@ const Game = () => {
       
       ctx.font = '14px Arial';
       ctx.fillText('WASD / Arrow Keys - Move', 20, 60);
-      ctx.fillText('1, 2, 3 - Switch Character', 20, 80);
+      ctx.fillText('1, 2, 3, 4 - Switch Character', 20, 80);
       ctx.fillText(`Active: ${gameState.characters[selectedCharacter]?.name}`, 20, 100);
       
       ctx.restore();
@@ -507,6 +511,7 @@ const Game = () => {
       if (e.key === '1') setSelectedCharacter(0);
       if (e.key === '2') setSelectedCharacter(1);
       if (e.key === '3') setSelectedCharacter(2);
+      if (e.key === '4') setSelectedCharacter(3);
     };
 
     const handleKeyUp = (e) => {
@@ -530,14 +535,14 @@ const Game = () => {
       <div className="game-header">
         <h1>Social Media Content Team - Interactive</h1>
         <div className="character-selector">
-          {['Strategist', 'Creator', 'Optimizer'].map((name, index) => (
+          {['Strategist', 'Creator', 'Optimizer', 'Supervisor Agent'].map((name, index) => (
             <button
               key={name}
               className={`character-btn ${selectedCharacter === index ? 'active' : ''}`}
               onClick={() => setSelectedCharacter(index)}
               style={{
-                borderColor: ['#4A90E2', '#F5A623', '#7ED321'][index],
-                backgroundColor: selectedCharacter === index ? ['#4A90E2', '#F5A623', '#7ED321'][index] + '33' : 'transparent'
+                borderColor: ['#FF6B6B', '#F5A623', '#7ED321', '#4A90E2'][index],
+                backgroundColor: selectedCharacter === index ? ['#FF6B6B', '#F5A623', '#7ED321', '#4A90E2'][index] + '33' : 'transparent'
               }}
             >
               {index + 1}. {name}
@@ -551,7 +556,7 @@ const Game = () => {
       />
       <div className="game-footer">
         <div className="role-cards">
-          <div className="role-card" style={{ borderLeft: '4px solid #4A90E2' }}>
+          <div className="role-card" style={{ borderLeft: '4px solid #FF6B6B' }}>
             <h3>🎯 Strategist</h3>
             <p>Plans comprehensive 7-day content strategies</p>
           </div>
@@ -562,6 +567,10 @@ const Game = () => {
           <div className="role-card" style={{ borderLeft: '4px solid #7ED321' }}>
             <h3>⚡ Optimizer</h3>
             <p>Optimizes content for maximum engagement</p>
+          </div>
+          <div className="role-card" style={{ borderLeft: '4px solid #4A90E2' }}>
+            <h3>👁️ Supervisor Agent</h3>
+            <p>Monitors and oversees content quality and strategy</p>
           </div>
         </div>
       </div>

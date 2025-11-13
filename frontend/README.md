@@ -10,20 +10,22 @@ A React + Vite application featuring an interactive canvas-based game showcasing
   - Multiple layers: Terrain, Trees, and Houses
   - Includes paths, grass, houses, trees, and decorative elements
   - Optimized rendering with pre-rendered map canvas
-- **Three Playable Characters with Unique Colors**: 
-  - 🎯 **Strategist** - Blue tinted character - Content Strategy Master
+- **Four Playable Characters with Unique Colors**: 
+  - 🎯 **Strategist** - Red tinted character - Content Strategy Master
   - ✍️ **Creator** - Orange tinted character - Tweet Generation Expert  
   - ⚡ **Optimizer** - Green tinted character - Quality Enhancement Specialist
+  - 👁️ **Supervisor Agent** - Blue tinted character - Content Quality Supervisor
 - **Animated Sprites with Color Tinting**: Character animations using sprite sheets from ninja-adventure with dynamic color tinting system
 - **Pixel-Perfect Rendering**: Crisp pixel art with proper scaling (3x) and no smoothing
-- **Character Switching**: Control different characters using number keys (1, 2, 3)
+- **Character Switching**: Control different characters using number keys (1, 2, 3, 4)
 
 ## Controls
 
 - **WASD** or **Arrow Keys** - Move the selected character
-- **1** - Select Strategist
-- **2** - Select Creator
-- **3** - Select Optimizer
+- **1** - Select Strategist (Red)
+- **2** - Select Creator (Orange)
+- **3** - Select Optimizer (Green)
+- **4** - Select Supervisor Agent (Blue)
 
 ## Installation
 
