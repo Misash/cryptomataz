@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables
+.env
+.env.*
+.env.agents
+.env.local
+.env.production
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# TypeScript
+*.tsbuildinfo
+/.next
+
+# Sensitive files
+instructions.md
+
+AGENTS_SETUP.md
+IMPLEMENTATION_SUMMARY.md
+QUICKSTART.md
+DEPLOYING_TO_TEE.md
+README.md
+TESTING.md
+
+
