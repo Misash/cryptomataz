@@ -576,21 +576,6 @@ const Game = () => {
     <div className="game-container">
       <div className="game-header">
         <h1>Social Media Content Team - Interactive</h1>
-        <div className="character-selector">
-          {['Strategist', 'Creator', 'Optimizer', 'Supervisor Agent'].map((name, index) => (
-            <button
-              key={name}
-              className={`character-btn ${selectedCharacter === index ? 'active' : ''}`}
-              onClick={() => setSelectedCharacter(index)}
-              style={{
-                borderColor: ['#FF6B6B', '#F5A623', '#7ED321', '#4A90E2'][index],
-                backgroundColor: selectedCharacter === index ? ['#FF6B6B', '#F5A623', '#7ED321', '#4A90E2'][index] + '33' : 'transparent'
-              }}
-            >
-              {index + 1}. {name}
-            </button>
-          ))}
-        </div>
         
         {/* Supervisor Agent Input Section */}
         <div className="supervisor-input-section">
@@ -646,27 +631,6 @@ const Game = () => {
           </div>
         </div>
       )}
-      
-      <div className="game-footer">
-        <div className="role-cards">
-          <div className="role-card" style={{ borderLeft: '4px solid #FF6B6B' }}>
-            <h3>🎯 Strategist</h3>
-            <p>Plans comprehensive 7-day content strategies</p>
-          </div>
-          <div className="role-card" style={{ borderLeft: '4px solid #F5A623' }}>
-            <h3>✍️ Creator</h3>
-            <p>Generates 14-21 viral tweet options</p>
-          </div>
-          <div className="role-card" style={{ borderLeft: '4px solid #7ED321' }}>
-            <h3>⚡ Optimizer</h3>
-            <p>Optimizes content for maximum engagement</p>
-          </div>
-          <div className="role-card" style={{ borderLeft: '4px solid #4A90E2' }}>
-            <h3>👁️ Supervisor Agent</h3>
-            <p>Monitors and oversees content quality and strategy</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
