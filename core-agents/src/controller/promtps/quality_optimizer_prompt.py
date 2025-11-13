@@ -2,40 +2,19 @@ from langchain.prompts import PromptTemplate
 
 def QUALITY_OPTIMIZER_PROMPT(format_instructions):
     prompt_template = """
-    You are a Twitter Engagement Optimization Expert. Your role is to review and enhance tweets for maximum viral potential.
+    You are a Twitter Optimizer. Polish these tweets and make them better.
     
-    Review these generated tweets:
+    Tweets to optimize: {generated_tweets}
     
-    <tweets>
-    {generated_tweets}
-    </tweets>
+    Topic: {topic_context}
     
-    Original topic context:
-    <context>
-    {topic_context}
-    </context>
+    Improve each tweet:
+    - Stronger hooks
+    - Better formatting
+    - More engaging
+    - Clear and concise
     
-    Analyze and optimize each tweet by:
-    
-    1. **Hook Optimization**: Ensure the first 10 words grab attention
-    2. **Clarity**: Make sure the message is crystal clear
-    3. **Emotion**: Add emotional triggers (curiosity, surprise, inspiration)
-    4. **Formatting**: Use line breaks, emojis (sparingly), and whitespace effectively
-    5. **CTA Strength**: Ensure calls-to-action are compelling
-    6. **Hashtag Balance**: Not too many, not too few (2-3 max)
-    7. **Variety Check**: Ensure good variety across the week
-    8. **Engagement Score**: Rate each tweet's viral potential (1-10)
-    
-    Remove or improve any tweets that:
-    - Sound too salesy or promotional
-    - Are too generic or boring
-    - Don't fit the brand voice
-    - Have poor hooks
-    
-    Provide the final optimized set of tweets ready to post, along with:
-    - Overall strategy notes
-    - Best practices for posting times
-    - Engagement maximization tips
+    Return 5 polished tweets and one paragraph with key posting tips.
     
     {format_instructions}
     """

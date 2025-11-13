@@ -19,7 +19,7 @@ def tweet_creator_agent(state):
     strategy_str = json.dumps(weekly_strategy, indent=2)
     
     llm = ChatOpenAI(
-        model_name=OpenAIModel.GPT_4_OMNI.value, 
+        model_name=OpenAIModel.GPT_4_OMNI_MINI.value, 
         temperature=0.8,  # Higher temp for creativity
         streaming=False
     )

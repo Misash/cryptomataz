@@ -19,7 +19,7 @@ def quality_optimizer_agent(state):
     tweets_str = json.dumps(generated_tweets, indent=2)
     
     llm = ChatOpenAI(
-        model_name=OpenAIModel.GPT_4_OMNI.value, 
+        model_name=OpenAIModel.GPT_4_OMNI_MINI.value, 
         temperature=0.5,  # Balanced for optimization
         streaming=False
     )
@@ -36,20 +36,28 @@ def quality_optimizer_agent(state):
             "topic_context": topic_context
         })
         print(f"Optimizer Tokens: {cb.total_tokens}")
+        print(f"Optimized content: {optimized_content}")
     
     tokens_used = state_dict.get("tokens_used", {})
     tokens_used["optimizer"] = cb.total_tokens
     tokens_used["total"] = sum(tokens_used.values())
     
+    # Extract tweets - handle both dict and object access
+    if isinstance(optimized_content, dict):
+        tweets = optimized_content.get("weekly_tweets", [])
+        tips = optimized_content.get("key_tips", "")
+    else:
+        tweets = optimized_content.weekly_tweets
+        tips = optimized_content.key_tips
+    
     return {
         "keys": {
             "response": {
-                "weekly_content": optimized_content["weekly_tweets"],
-                "strategy_notes": optimized_content["overall_strategy_notes"],
-                "engagement_tips": optimized_content["engagement_tips"],
+                "tweets": tweets,
+                "tips": tips,
                 "models": {
                     "chat": {
-                        "model": OpenAIModel.GPT_4_OMNI.value,
+                        "model": OpenAIModel.GPT_4_OMNI_MINI.value,
                         "tokens": tokens_used
                     }
                 }

@@ -14,7 +14,7 @@ def content_strategist_agent(state):
     topic_context = state_dict["topic_context"]
     
     llm = ChatOpenAI(
-        model_name=OpenAIModel.GPT_4_OMNI.value, 
+        model_name=OpenAIModel.GPT_4_OMNI_MINI.value, 
         temperature=0.7, 
         streaming=False
     )

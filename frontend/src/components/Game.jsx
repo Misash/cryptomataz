@@ -3,7 +3,7 @@ import './Game.css';
 import playerSprite from '../assets/images/player.png';
 import terrainSprite from '../assets/images/terrain.png';
 import decorationsSprite from '../assets/images/decorations.png';
-import { SUPERVISOR_AGENT_ENDPOINT } from '../config/api';
+import { SUPERVISOR_AGENT_STREAM_ENDPOINT } from '../config/api';
 
 /**
  * Game component - Main canvas-based game with three playable characters
@@ -750,16 +750,14 @@ const Game = () => {
         }, delay);
       });
       
-      // Clear conversation after total duration and move to next target
+      // Clear conversation after total duration
+      // Note: No longer calling moveToNextInteraction() - SSE controls the flow now
       setTimeout(() => {
         gameState.conversationActive = false;
         gameState.activeEmojis = [];
         gameState.chatMessages = [];
         setActiveEmojis([]);
         setChatMessages([]);
-        
-        // Move to next interaction in queue
-        moveToNextInteraction();
       }, 8000); // Total conversation duration: 8 seconds
     };
 
@@ -933,59 +931,175 @@ const Game = () => {
     initGame();
   }, []);
 
-  // Handle Supervisor Agent API call
+  // Agent mapping for SSE events synchronization
+  const AGENT_MAP = {
+    'strategist': 0,
+    'creator': 1,
+    'optimizer': 2
+  };
+
+  // Helper function to move supervisor to specific agent
+  const moveToAgent = (targetIndex) => {
+    const gameState = gameStateRef.current;
+    const supervisorAgent = gameState.characters[3];
+    const targetChar = gameState.characters[targetIndex];
+    
+    if (targetChar && supervisorAgent) {
+      console.log(`Moving Supervisor to ${targetChar.name}`);
+      gameState.currentInteractionTarget = targetIndex;
+      const offsetX = -60;
+      const offsetY = 0;
+      supervisorAgent.targetX = targetChar.x + targetChar.width / 2 + offsetX;
+      supervisorAgent.targetY = targetChar.y + targetChar.height / 2 + offsetY;
+      supervisorAgent.autoMove = true;
+    }
+  };
+
+  // Helper function to move supervisor to final position
+  const moveToFinalPosition = () => {
+    const gameState = gameStateRef.current;
+    const supervisorAgent = gameState.characters[3];
+    
+    if (supervisorAgent) {
+      console.log('Moving Supervisor to final position');
+      const TILE_SIZE = 16;
+      const SCALE = 2;
+      const finalTileX = 13;
+      const finalTileY = 26;
+      supervisorAgent.targetX = finalTileX * (TILE_SIZE * SCALE) + (TILE_SIZE * SCALE) / 2;
+      supervisorAgent.targetY = finalTileY * (TILE_SIZE * SCALE) + (TILE_SIZE * SCALE) / 2;
+      supervisorAgent.autoMove = true;
+      gameState.currentInteractionTarget = -1;
+    }
+  };
+
+  // Handle Supervisor Agent API call with SSE (Server-Sent Events)
   const handleRunSupervisorAgent = async () => {
     if (!topicContext.trim()) {
       setError('Please enter a topic context');
       return;
     }
 
-    // Activate automatic movement sequence for Supervisor Agent
-    // Sequence: Strategist (0) -> Creator (1) -> Optimizer (2)
-    const gameState = gameStateRef.current;
-    const supervisorAgent = gameState.characters[3]; // Supervisor Agent index
-    const strategist = gameState.characters[0]; // Strategist index
-    
-    if (supervisorAgent && strategist) {
-      // Set up interaction queue: Strategist -> Creator -> Optimizer -> Final Position
-      // Start with Strategist (0), then queue Creator (1), Optimizer (2), and Final Position (-1)
-      gameState.interactionQueue = [1, 2, -1]; // Queue: Creator, Optimizer, Final Position
-      gameState.currentInteractionTarget = 0; // Start with Strategist
-      
-      // Set target to a position near Strategist (to the left side, 60 pixels away)
-      const offsetX = -60; // Stop to the left of Strategist
-      const offsetY = 0; // Same vertical level
-      supervisorAgent.targetX = strategist.x + strategist.width / 2 + offsetX;
-      supervisorAgent.targetY = strategist.y + strategist.height / 2 + offsetY;
-      supervisorAgent.autoMove = true; // Enable automatic movement
-    }
-
     setLoading(true);
     setError(null);
     setOutput(null);
 
+    const gameState = gameStateRef.current;
+    const supervisorAgent = gameState.characters[3];
+    
+    // Reset queue and position - SSE will control movement now
+    gameState.interactionQueue = [];
+    gameState.currentInteractionTarget = null;
+    supervisorAgent.autoMove = false;
+
     try {
-      const response = await fetch(SUPERVISOR_AGENT_ENDPOINT, {
+      console.log('Starting SSE connection...');
+      
+      // Create request body
+      const requestBody = JSON.stringify({ topic_context: topicContext });
+      
+      // Use fetch with streaming for SSE
+      const response = await fetch(SUPERVISOR_AGENT_STREAM_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
         },
-        body: JSON.stringify({
-          topic_context: topicContext,
-        }),
+        body: requestBody,
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      setOutput(data);
+      // Read the stream
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          console.log('Stream completed');
+          setLoading(false);
+          break;
+        }
+
+        // Decode the chunk and add to buffer
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Process complete SSE messages (separated by \n\n)
+        const messages = buffer.split('\n\n');
+        buffer = messages.pop() || ''; // Keep incomplete message in buffer
+        
+        for (const message of messages) {
+          if (message.startsWith('data: ')) {
+            const eventData = message.slice(6); // Remove 'data: ' prefix
+            
+            try {
+              const data = JSON.parse(eventData);
+              console.log('Received event:', data);
+              
+              // Handle different event types
+              switch(data.event) {
+                case 'workflow_started':
+                  console.log('Workflow started:', data.topic);
+                  break;
+                  
+                case 'agent_started':
+                  console.log(`Agent started: ${data.name}`);
+                  // Move Supervisor Agent to the target agent
+                  const targetIndex = AGENT_MAP[data.agent];
+                  if (targetIndex !== undefined) {
+                    moveToAgent(targetIndex);
+                  }
+                  break;
+                  
+                case 'agent_completed':
+                  console.log(`Agent completed: ${data.name}`);
+                  // Wait a bit before starting conversation (let movement finish)
+                  setTimeout(() => {
+                    const targetIndex = AGENT_MAP[data.agent];
+                    if (targetIndex !== undefined) {
+                      startConversation(targetIndex);
+                    }
+                  }, 2000); // Wait 2 seconds for supervisor to reach target
+                  break;
+                  
+                case 'final_result':
+                  console.log('Final result received');
+                  setOutput({ data: data.data });
+                  // Move to final position and show completion animation
+                  setTimeout(() => {
+                    moveToFinalPosition();
+                    // Start final conversation after movement
+                    setTimeout(() => {
+                      startConversation(-1);
+                    }, 2000);
+                  }, 3000); // Wait for last conversation to finish
+                  setLoading(false);
+                  break;
+                  
+                case 'error':
+                  console.error('Error:', data.message);
+                  setError(data.message);
+                  setLoading(false);
+                  break;
+                  
+                default:
+                  console.log('Unknown event type:', data.event);
+              }
+            } catch (parseError) {
+              console.error('Error parsing event data:', parseError);
+            }
+          }
+        }
+      }
+
     } catch (err) {
-      setError(err.message || 'Failed to call Supervisor Agent API');
+      setError(err.message || 'Failed to connect to Supervisor Agent API');
       console.error('Supervisor Agent API Error:', err);
-    } finally {
       setLoading(false);
     }
   };

@@ -7,30 +7,22 @@ class Tweet(BaseModel):
 
 # MODELS FOR WEEKLY CONTENT GENERATION
 
-class DailyStrategy(BaseModel):
-    day: str = Field(description="Day of the week (Monday, Tuesday, etc.)")
-    theme: str = Field(description="Main theme for the day")
-    hook_angle: str = Field(description="Hook or angle to capture attention")
-    content_type: str = Field(description="Type of content (Educational, Inspirational, Story, Thread, etc.)")
-    hashtags: List[str] = Field(description="Relevant hashtags for the day")
-
 class WeeklyContentStrategy(BaseModel):
-    main_topic: str = Field(description="Main topic for the week")
-    target_audience: str = Field(description="Target audience description")
-    daily_strategies: List[DailyStrategy] = Field(description="Strategy for each day of the week")
+    """Simplified strategy - just 3 core content angles"""
+    main_topic: str = Field(description="Main topic")
+    target_audience: str = Field(description="Who this content is for")
+    content_angles: List[str] = Field(description="3 different angles to approach the topic")
 
-class DailyTweet(BaseModel):
-    day: str = Field(description="Day of the week")
-    tweet_text: str = Field(description="Tweet content")
-    hook: str = Field(description="Opening hook")
-    cta: str = Field(description="Call to action")
-    engagement_score: int = Field(description="Estimated engagement score (1-10)")
-    hashtags: List[str] = Field(description="Hashtags to use")
+class SimpleTweet(BaseModel):
+    """Simplified tweet - just the essentials"""
+    tweet_text: str = Field(description="Complete tweet content (max 280 chars)")
+    content_type: str = Field(description="Type: educational, inspirational, or entertaining")
 
 class WeeklyTweetsPlan(BaseModel):
-    tweets: List[DailyTweet] = Field(description="List of tweets for the week (2-3 per day)")
+    """Just 5 quality tweets instead of 14-21"""
+    tweets: List[SimpleTweet] = Field(description="5 high-quality tweets ready to post")
     
 class OptimizedWeeklyContent(BaseModel):
-    weekly_tweets: List[DailyTweet] = Field(description="Optimized tweets for the week")
-    overall_strategy_notes: str = Field(description="Notes about the overall weekly strategy")
-    engagement_tips: List[str] = Field(description="Tips to maximize engagement")
+    """Simplified output - just the best tweets and key tips"""
+    weekly_tweets: List[SimpleTweet] = Field(description="5 optimized, ready-to-post tweets")
+    key_tips: str = Field(description="One paragraph with the most important engagement tips")
