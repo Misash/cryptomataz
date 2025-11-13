@@ -16,8 +16,13 @@ A React + Vite application featuring an interactive canvas-based game showcasing
   - ⚡ **Optimizer** - Green tinted character - Quality Enhancement Specialist
   - 👁️ **Supervisor Agent** - Blue tinted character - Content Quality Supervisor
 - **Animated Sprites with Color Tinting**: Character animations using sprite sheets from ninja-adventure with dynamic color tinting system
-- **Pixel-Perfect Rendering**: Crisp pixel art with proper scaling (3x) and no smoothing
+- **Pixel-Perfect Rendering**: Crisp pixel art with proper scaling (2x) and no smoothing
 - **Character Switching**: Control different characters using number keys (1, 2, 3, 4)
+- **Supervisor Agent API Integration**: 
+  - Input field for topic context (below title)
+  - Run button to execute Supervisor Agent workflow
+  - Output display area (below map) showing API response
+  - Full error handling and loading states
 
 ## Controls
 
@@ -45,6 +50,44 @@ npm run dev
 npm build
 ```
 
+## Supervisor Agent API
+
+The frontend includes integration with the Supervisor Agent API endpoint from `core-agents`.
+
+### Configuration
+
+The API endpoint URL is configured in `src/config/api.js`. By default, it points to:
+- `http://localhost:8000/supervisor-agent/`
+
+To change the API URL, either:
+1. Update `API_BASE_URL` in `src/config/api.js`
+2. Set environment variable `VITE_API_BASE_URL` in a `.env` file
+
+### API Request Format
+
+```json
+{
+  "topic_context": "AI automation for small businesses"
+}
+```
+
+### API Response Format
+
+```json
+{
+  "data": {
+    // Response from supervisor agent workflow
+    // Contains weekly strategy, tweets, and optimization results
+  }
+}
+```
+
+### Usage
+
+1. Enter a topic context in the input field (below the title)
+2. Click "Run" button or press Enter
+3. View the output in the output section (below the map)
+
 ## Assets
 
 All game assets (sprites, terrain, decorations) are from the ninja-adventure game and located in `src/assets/images/`.
@@ -55,3 +98,4 @@ All game assets (sprites, terrain, decorations) are from the ninja-adventure gam
 - Vite 5
 - HTML5 Canvas
 - CSS3 with animations
+- Fetch API for HTTP requests

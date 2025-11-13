@@ -3,6 +3,7 @@ import './Game.css';
 import playerSprite from '../assets/images/player.png';
 import terrainSprite from '../assets/images/terrain.png';
 import decorationsSprite from '../assets/images/decorations.png';
+import { SUPERVISOR_AGENT_ENDPOINT } from '../config/api';
 
 /**
  * Game component - Main canvas-based game with three playable characters
@@ -10,6 +11,10 @@ import decorationsSprite from '../assets/images/decorations.png';
 const Game = () => {
   const canvasRef = useRef(null);
   const [selectedCharacter, setSelectedCharacter] = useState(0);
+  const [topicContext, setTopicContext] = useState('');
+  const [output, setOutput] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
     const gameStateRef = useRef({
     characters: [],
     keys: {},
@@ -530,6 +535,43 @@ const Game = () => {
     };
   }, [selectedCharacter]);
 
+  // Handle Supervisor Agent API call
+  const handleRunSupervisorAgent = async () => {
+    if (!topicContext.trim()) {
+      setError('Please enter a topic context');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setOutput(null);
+
+    try {
+      const response = await fetch(SUPERVISOR_AGENT_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          topic_context: topicContext,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setOutput(data);
+    } catch (err) {
+      setError(err.message || 'Failed to call Supervisor Agent API');
+      console.error('Supervisor Agent API Error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="game-container">
       <div className="game-header">
@@ -549,11 +591,62 @@ const Game = () => {
             </button>
           ))}
         </div>
+        
+        {/* Supervisor Agent Input Section */}
+        <div className="supervisor-input-section">
+          <div className="input-container">
+            <label htmlFor="topic-context" className="input-label">
+              Supervisor Agent - Topic Context:
+            </label>
+            <div className="input-group">
+              <input
+                id="topic-context"
+                type="text"
+                className="topic-input"
+                placeholder="Enter topic or theme for weekly Twitter content (e.g., 'AI automation for small businesses')"
+                value={topicContext}
+                onChange={(e) => setTopicContext(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !loading) {
+                    handleRunSupervisorAgent();
+                  }
+                }}
+                disabled={loading}
+              />
+              <button
+                className="run-button"
+                onClick={handleRunSupervisorAgent}
+                disabled={loading || !topicContext.trim()}
+              >
+                {loading ? 'Running...' : 'Run'}
+              </button>
+            </div>
+            {error && (
+              <div className="error-message">
+                ⚠️ {error}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+      
       <canvas
         ref={canvasRef}
         className="game-canvas"
       />
+      
+      {/* Supervisor Agent Output Section */}
+      {output && (
+        <div className="supervisor-output-section">
+          <h2 className="output-title">Supervisor Agent Output</h2>
+          <div className="output-container">
+            <pre className="output-content">
+              {JSON.stringify(output, null, 2)}
+            </pre>
+          </div>
+        </div>
+      )}
+      
       <div className="game-footer">
         <div className="role-cards">
           <div className="role-card" style={{ borderLeft: '4px solid #FF6B6B' }}>
