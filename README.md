@@ -1,6 +1,7 @@
 # Cryptomataz
 
 Viral content generation system for Twitter using multi-agent architecture with LangGraph and AI.
+Autonomous AI agents that buy, sell, and trade computational resources from each other—without human intervention
 
 ## Features
 
