@@ -15,6 +15,8 @@ const Game = () => {
   const [output, setOutput] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [activeEmojis, setActiveEmojis] = useState([]); // Array of {characterIndex, emoji, startTime, duration}
+  const [chatMessages, setChatMessages] = useState([]); // Array of {from, to, message, startTime, duration}
     const gameStateRef = useRef({
     characters: [],
     keys: {},
@@ -23,6 +25,9 @@ const Game = () => {
     imagesLoaded: 0,
     totalImages: 3,
     mapCanvas: null,
+    conversationActive: false,
+    activeEmojis: [], // Store emojis in gameState for access in game loop
+    chatMessages: [], // Store messages in gameState for access in game loop
   });
 
   useEffect(() => {
@@ -97,6 +102,9 @@ const Game = () => {
       name,
       color,
       index,
+      autoMove: false, // Flag for automatic movement
+      targetX: null, // Target X position for auto movement
+      targetY: null, // Target Y position for auto movement
       sprites: {
         walkDown: { x: 0, y: 0, frameCount: 4 },
         walkUp: { x: 16, y: 0, frameCount: 4 },
@@ -416,8 +424,57 @@ const Game = () => {
       ctx.restore();
     };
 
+    // Handle automatic movement towards target
+    const handleAutoMovement = (character) => {
+      if (!character.autoMove || character.targetX === null || character.targetY === null) {
+        return;
+      }
+
+      const targetX = character.targetX;
+      const targetY = character.targetY;
+      const centerX = character.x + character.width / 2;
+      const centerY = character.y + character.height / 2;
+      
+      const dx = targetX - centerX;
+      const dy = targetY - centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // Stop if close enough to target (within 60 pixels for Supervisor Agent, 5 for others)
+      const stopDistance = character.index === 3 ? 60 : 5; // Supervisor Agent stops further away
+      if (distance < stopDistance) {
+        character.velocityX = 0;
+        character.velocityY = 0;
+        character.autoMove = false;
+        
+        // If Supervisor Agent reached Strategist, start conversation
+        if (character.index === 3) { // Supervisor Agent index
+          startConversation();
+        }
+        return;
+      }
+      
+      // Calculate direction and set velocity
+      const normalizedDx = dx / distance;
+      const normalizedDy = dy / distance;
+      
+      character.velocityX = normalizedDx * character.speed;
+      character.velocityY = normalizedDy * character.speed;
+      
+      // Update facing direction based on movement
+      if (Math.abs(dx) > Math.abs(dy)) {
+        character.facing = dx > 0 ? 'right' : 'left';
+      } else {
+        character.facing = dy > 0 ? 'down' : 'up';
+      }
+    };
+
     // Update character
     const updateCharacter = (character, deltaTime) => {
+      // Handle automatic movement if enabled
+      if (character.autoMove) {
+        handleAutoMovement(character);
+      }
+      
       // Update animation frame
       character.elapsedTime += deltaTime;
       if (character.elapsedTime > character.frameInterval) {
@@ -444,23 +501,36 @@ const Game = () => {
       const character = gameState.characters[selectedCharacter];
       if (!character) return;
 
-      character.velocityX = 0;
-      character.velocityY = 0;
-
-      if (gameState.keys['ArrowRight'] || gameState.keys['d']) {
-        character.velocityX = character.speed;
-        character.facing = 'right';
-      } else if (gameState.keys['ArrowLeft'] || gameState.keys['a']) {
-        character.velocityX = -character.speed;
-        character.facing = 'left';
+      // If character has auto movement enabled, disable it when user takes control
+      if (character.autoMove && (gameState.keys['ArrowRight'] || gameState.keys['d'] || 
+          gameState.keys['ArrowLeft'] || gameState.keys['a'] || 
+          gameState.keys['ArrowUp'] || gameState.keys['w'] || 
+          gameState.keys['ArrowDown'] || gameState.keys['s'])) {
+        character.autoMove = false;
+        character.targetX = null;
+        character.targetY = null;
       }
 
-      if (gameState.keys['ArrowUp'] || gameState.keys['w']) {
-        character.velocityY = -character.speed;
-        character.facing = 'up';
-      } else if (gameState.keys['ArrowDown'] || gameState.keys['s']) {
-        character.velocityY = character.speed;
-        character.facing = 'down';
+      // Only handle manual input if auto movement is not active
+      if (!character.autoMove) {
+        character.velocityX = 0;
+        character.velocityY = 0;
+
+        if (gameState.keys['ArrowRight'] || gameState.keys['d']) {
+          character.velocityX = character.speed;
+          character.facing = 'right';
+        } else if (gameState.keys['ArrowLeft'] || gameState.keys['a']) {
+          character.velocityX = -character.speed;
+          character.facing = 'left';
+        }
+
+        if (gameState.keys['ArrowUp'] || gameState.keys['w']) {
+          character.velocityY = -character.speed;
+          character.facing = 'up';
+        } else if (gameState.keys['ArrowDown'] || gameState.keys['s']) {
+          character.velocityY = character.speed;
+          character.facing = 'down';
+        }
       }
     };
 
@@ -483,10 +553,199 @@ const Game = () => {
         drawCharacter(character);
       });
 
+      // Draw emojis above characters
+      drawEmojis();
+
+      // Draw chat messages
+      drawChatMessages();
+
       // Draw instructions
       drawInstructions();
 
       requestAnimationFrame(gameLoop);
+    };
+
+    // Start conversation between characters
+    const startConversation = () => {
+      if (gameState.conversationActive) return;
+      gameState.conversationActive = true;
+      
+      const currentTime = Date.now();
+      const emojiDuration = 3000; // 3 seconds per emoji
+      const messageDuration = 4000; // 4 seconds per message
+      
+      // Define emojis for each character
+      const emojiSequence = [
+        { characterIndex: 3, emoji: '💰', delay: 0 }, // Supervisor Agent - Money
+        { characterIndex: 0, emoji: '💼', delay: 500 }, // Strategist - Briefcase (work)
+        { characterIndex: 1, emoji: '✍️', delay: 1000 }, // Creator - Writing
+        { characterIndex: 2, emoji: '✨', delay: 1500 }, // Optimizer - Sparkles
+        { characterIndex: 3, emoji: '📊', delay: 2000 }, // Supervisor Agent - Chart
+        { characterIndex: 0, emoji: '🎯', delay: 2500 }, // Strategist - Target
+      ];
+      
+      // Define chat messages
+      const messages = [
+        { from: 3, to: 0, message: 'Let\'s discuss the strategy!', delay: 0 },
+        { from: 0, to: 3, message: 'Perfect! Here\'s my plan...', delay: 2000 },
+        { from: 1, to: 0, message: 'I can create content for this!', delay: 4000 },
+        { from: 2, to: 1, message: 'I\'ll optimize it!', delay: 6000 },
+      ];
+      
+      // Add emojis with delays - store in gameState
+      emojiSequence.forEach(({ characterIndex, emoji, delay }) => {
+        setTimeout(() => {
+          gameState.activeEmojis.push({
+            characterIndex,
+            emoji,
+            startTime: Date.now(),
+            duration: emojiDuration,
+            offsetY: 0,
+            opacity: 1
+          });
+          // Also update React state for reactivity
+          setActiveEmojis([...gameState.activeEmojis]);
+        }, delay);
+      });
+      
+      // Add messages with delays - store in gameState
+      messages.forEach(({ from, to, message, delay }) => {
+        setTimeout(() => {
+          gameState.chatMessages.push({
+            from,
+            to,
+            message,
+            startTime: Date.now(),
+            duration: messageDuration
+          });
+          // Also update React state for reactivity
+          setChatMessages([...gameState.chatMessages]);
+        }, delay);
+      });
+      
+      // Clear conversation after total duration
+      setTimeout(() => {
+        gameState.conversationActive = false;
+        gameState.activeEmojis = [];
+        gameState.chatMessages = [];
+        setActiveEmojis([]);
+        setChatMessages([]);
+      }, 10000); // Total conversation duration: 10 seconds
+    };
+
+    // Draw emojis above characters
+    const drawEmojis = () => {
+      const currentTime = Date.now();
+      // Use gameState.activeEmojis instead of React state
+      const activeEmojisToDraw = gameState.activeEmojis.filter(emojiData => {
+        const elapsed = currentTime - emojiData.startTime;
+        return elapsed < emojiData.duration;
+      });
+      
+      activeEmojisToDraw.forEach(emojiData => {
+        const character = gameState.characters[emojiData.characterIndex];
+        if (!character) return;
+        
+        const elapsed = currentTime - emojiData.startTime;
+        const progress = elapsed / emojiData.duration;
+        
+        // Animate emoji floating up
+        const floatOffset = -30 - (progress * 20); // Float up
+        const opacity = 1 - progress; // Fade out
+        
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        ctx.font = '24px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(
+          emojiData.emoji,
+          character.x + character.width / 2,
+          character.y - 40 + floatOffset
+        );
+        ctx.restore();
+      });
+      
+      // Update gameState to remove expired emojis
+      if (activeEmojisToDraw.length !== gameState.activeEmojis.length) {
+        gameState.activeEmojis = activeEmojisToDraw;
+        setActiveEmojis([...gameState.activeEmojis]);
+      }
+    };
+
+    // Draw chat messages above characters' heads
+    const drawChatMessages = () => {
+      const currentTime = Date.now();
+      // Use gameState.chatMessages instead of React state
+      const activeMessages = gameState.chatMessages.filter(msg => {
+        const elapsed = currentTime - msg.startTime;
+        return elapsed < msg.duration;
+      });
+      
+      activeMessages.forEach(msg => {
+        const fromChar = gameState.characters[msg.from];
+        if (!fromChar) return;
+        
+        const elapsed = currentTime - msg.startTime;
+        const progress = elapsed / msg.duration;
+        const opacity = progress < 0.1 ? progress * 10 : (progress > 0.9 ? (1 - progress) * 10 : 1);
+        
+        // Position message above the character's head
+        const messageX = fromChar.x + fromChar.width / 2;
+        const messageY = fromChar.y - 50; // Above the character's head
+        
+        // Draw speech bubble
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.lineWidth = 2;
+        
+        // Measure text width for bubble sizing
+        ctx.font = '12px Arial';
+        const textMetrics = ctx.measureText(msg.message);
+        const bubbleWidth = textMetrics.width + 20;
+        const bubbleHeight = 30;
+        const bubbleX = messageX - bubbleWidth / 2;
+        const bubbleY = messageY - bubbleHeight;
+        
+        // Draw rounded rectangle for speech bubble
+        const radius = 5;
+        ctx.beginPath();
+        ctx.moveTo(bubbleX + radius, bubbleY);
+        ctx.lineTo(bubbleX + bubbleWidth - radius, bubbleY);
+        ctx.quadraticCurveTo(bubbleX + bubbleWidth, bubbleY, bubbleX + bubbleWidth, bubbleY + radius);
+        ctx.lineTo(bubbleX + bubbleWidth, bubbleY + bubbleHeight - radius);
+        ctx.quadraticCurveTo(bubbleX + bubbleWidth, bubbleY + bubbleHeight, bubbleX + bubbleWidth - radius, bubbleY + bubbleHeight);
+        ctx.lineTo(bubbleX + radius, bubbleY + bubbleHeight);
+        ctx.quadraticCurveTo(bubbleX, bubbleY + bubbleHeight, bubbleX, bubbleY + bubbleHeight - radius);
+        ctx.lineTo(bubbleX, bubbleY + radius);
+        ctx.quadraticCurveTo(bubbleX, bubbleY, bubbleX + radius, bubbleY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Draw small triangle pointing to character (speech bubble tail)
+        ctx.beginPath();
+        ctx.moveTo(messageX, messageY);
+        ctx.lineTo(messageX - 8, messageY + 8);
+        ctx.lineTo(messageX + 8, messageY + 8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Message text
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = 'center';
+        ctx.fillText(msg.message, messageX, messageY - 10);
+        
+        ctx.restore();
+      });
+      
+      // Update gameState to remove expired messages
+      if (activeMessages.length !== gameState.chatMessages.length) {
+        gameState.chatMessages = activeMessages;
+        setChatMessages([...gameState.chatMessages]);
+      }
     };
 
     // Draw instructions
@@ -540,6 +799,20 @@ const Game = () => {
     if (!topicContext.trim()) {
       setError('Please enter a topic context');
       return;
+    }
+
+    // Activate automatic movement for Supervisor Agent to walk towards Strategist
+    const gameState = gameStateRef.current;
+    const supervisorAgent = gameState.characters[3]; // Supervisor Agent index
+    const strategist = gameState.characters[0]; // Strategist index
+    if (supervisorAgent && strategist) {
+      // Set target to a position near Strategist (to the left side, 60 pixels away)
+      // This ensures Supervisor Agent stops near but not on top of Strategist
+      const offsetX = -60; // Stop to the left of Strategist
+      const offsetY = 0; // Same vertical level
+      supervisorAgent.targetX = strategist.x + strategist.width / 2 + offsetX;
+      supervisorAgent.targetY = strategist.y + strategist.height / 2 + offsetY;
+      supervisorAgent.autoMove = true; // Enable automatic movement
     }
 
     setLoading(true);
