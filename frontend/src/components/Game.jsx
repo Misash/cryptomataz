@@ -576,61 +576,75 @@ const Game = () => {
     <div className="game-container">
       <div className="game-header">
         <h1>Social Media Content Team - Interactive</h1>
+      </div>
+      
+      <div className="game-layout">
+        {/* Left side: Game Map */}
+        <div className="game-map-container">
+          <canvas
+            ref={canvasRef}
+            className="game-canvas"
+          />
+        </div>
         
-        {/* Supervisor Agent Input Section */}
-        <div className="supervisor-input-section">
-          <div className="input-container">
-            <label htmlFor="topic-context" className="input-label">
-              Supervisor Agent - Topic Context:
-            </label>
-            <div className="input-group">
-              <input
-                id="topic-context"
-                type="text"
-                className="topic-input"
-                placeholder="Enter topic or theme for weekly Twitter content (e.g., 'AI automation for small businesses')"
-                value={topicContext}
-                onChange={(e) => setTopicContext(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !loading) {
-                    handleRunSupervisorAgent();
-                  }
-                }}
-                disabled={loading}
-              />
-              <button
-                className="run-button"
-                onClick={handleRunSupervisorAgent}
-                disabled={loading || !topicContext.trim()}
-              >
-                {loading ? 'Running...' : 'Run'}
-              </button>
+        {/* Right side: Input and Output */}
+        <div className="game-controls-container">
+          {/* Supervisor Agent Input Section */}
+          <div className="supervisor-input-section">
+            <div className="input-container">
+              <label htmlFor="topic-context" className="input-label">
+                Supervisor Agent - Topic Context:
+              </label>
+              <div className="input-group">
+                <input
+                  id="topic-context"
+                  type="text"
+                  className="topic-input"
+                  placeholder="Enter topic or theme for weekly Twitter content (e.g., 'AI automation for small businesses')"
+                  value={topicContext}
+                  onChange={(e) => setTopicContext(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !loading) {
+                      handleRunSupervisorAgent();
+                    }
+                  }}
+                  disabled={loading}
+                />
+                <button
+                  className="run-button"
+                  onClick={handleRunSupervisorAgent}
+                  disabled={loading || !topicContext.trim()}
+                >
+                  {loading ? 'Running...' : 'Run'}
+                </button>
+              </div>
+              {error && (
+                <div className="error-message">
+                  ⚠️ {error}
+                </div>
+              )}
             </div>
-            {error && (
-              <div className="error-message">
-                ⚠️ {error}
+          </div>
+          
+          {/* Supervisor Agent Output Section */}
+          <div className="supervisor-output-section">
+            {output ? (
+              <>
+                <h2 className="output-title">Supervisor Agent Output</h2>
+                <div className="output-container">
+                  <pre className="output-content">
+                    {JSON.stringify(output, null, 2)}
+                  </pre>
+                </div>
+              </>
+            ) : (
+              <div className="output-placeholder">
+                <p>Output will appear here after running the Supervisor Agent</p>
               </div>
             )}
           </div>
         </div>
       </div>
-      
-      <canvas
-        ref={canvasRef}
-        className="game-canvas"
-      />
-      
-      {/* Supervisor Agent Output Section */}
-      {output && (
-        <div className="supervisor-output-section">
-          <h2 className="output-title">Supervisor Agent Output</h2>
-          <div className="output-container">
-            <pre className="output-content">
-              {JSON.stringify(output, null, 2)}
-            </pre>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
