@@ -987,10 +987,24 @@ const Game = () => {
     const gameState = gameStateRef.current;
     const supervisorAgent = gameState.characters[3];
     
+    // Reset Supervisor Agent to original position (500, 300)
+    supervisorAgent.x = 500;
+    supervisorAgent.y = 300;
+    supervisorAgent.velocityX = 0;
+    supervisorAgent.velocityY = 0;
+    supervisorAgent.facing = 'down';
+    
     // Reset queue and position - SSE will control movement now
     gameState.interactionQueue = [];
     gameState.currentInteractionTarget = null;
     supervisorAgent.autoMove = false;
+    
+    // Clear any active conversations
+    gameState.conversationActive = false;
+    gameState.activeEmojis = [];
+    gameState.chatMessages = [];
+    setActiveEmojis([]);
+    setChatMessages([]);
 
     try {
       console.log('Starting SSE connection...');
@@ -1162,16 +1176,102 @@ const Game = () => {
         <div className="supervisor-output-section">
             {output ? (
               <>
-          <h2 className="output-title">Supervisor Agent Output</h2>
-          <div className="output-container">
-            <pre className="output-content">
-              {JSON.stringify(output, null, 2)}
-            </pre>
+          <h2 className="output-title">✨ Your Twitter Content is Ready!</h2>
+          
+          {/* Tweets Display */}
+          <div className="tweets-container">
+            {output.data?.tweets?.map((tweet, index) => (
+              <div key={index} className="tweet-card">
+                <div className="tweet-header">
+                  <div className="tweet-number">#{index + 1}</div>
+                  <span className={`tweet-type-badge ${tweet.content_type}`}>
+                    {tweet.content_type === 'educational' && '📚 Educational'}
+                    {tweet.content_type === 'inspirational' && '✨ Inspirational'}
+                    {tweet.content_type === 'entertaining' && '😄 Entertaining'}
+                  </span>
                 </div>
+                <div className="tweet-content">
+                  {tweet.tweet_text}
+                </div>
+                <div className="tweet-footer">
+                  <span className="tweet-length">{tweet.tweet_text.length}/280 chars</span>
+                  <button 
+                    className="copy-tweet-btn"
+                    onClick={() => {
+                      navigator.clipboard.writeText(tweet.tweet_text);
+                      // Show copied feedback
+                      const btn = document.activeElement;
+                      const originalText = btn.textContent;
+                      btn.textContent = '✓ Copied!';
+                      btn.style.background = '#10b981';
+                      setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.background = '';
+                      }, 2000);
+                    }}
+                  >
+                    📋 Copy Tweet
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Engagement Tips */}
+          {output.data?.tips && (
+            <div className="engagement-tips">
+              <h3>💡 Pro Tips for Maximum Engagement</h3>
+              <p>{output.data.tips}</p>
+            </div>
+          )}
+
+          {/* Stats */}
+          {output.data?.models?.chat?.tokens && (
+            <div className="generation-stats">
+              <h3>📊 Generation Stats</h3>
+              <div className="stats-grid">
+                <div className="stat-item">
+                  <span className="stat-label">Model</span>
+                  <span className="stat-value">{output.data.models.chat.model}</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">Total Tokens</span>
+                  <span className="stat-value">{output.data.models.chat.tokens.total?.toLocaleString()}</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">Tweets Generated</span>
+                  <span className="stat-value">{output.data.tweets?.length || 0}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Copy All Button */}
+          <button 
+            className="copy-all-btn"
+            onClick={() => {
+              const allTweets = output.data?.tweets?.map((t, i) => 
+                `Tweet ${i + 1} (${t.content_type}):\n${t.tweet_text}`
+              ).join('\n\n');
+              navigator.clipboard.writeText(allTweets);
+              const btn = document.activeElement;
+              const originalText = btn.textContent;
+              btn.textContent = '✓ All Tweets Copied!';
+              btn.style.background = '#10b981';
+              setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = '';
+              }, 2000);
+            }}
+          >
+            📑 Copy All Tweets
+          </button>
               </>
             ) : (
               <div className="output-placeholder">
-                <p>Output will appear here after running the Supervisor Agent</p>
+                <div className="placeholder-icon">🐦</div>
+                <p>Your Twitter content will appear here</p>
+                <p className="placeholder-subtitle">Enter a topic and click RUN to generate amazing tweets!</p>
               </div>
             )}
           </div>

@@ -20,7 +20,7 @@ def tweet_creator_agent(state):
     
     llm = ChatOpenAI(
         model_name=OpenAIModel.GPT_4_OMNI_MINI.value, 
-        temperature=0.8,  # Higher temp for creativity
+        temperature=0,  # Higher temp for creativity
         streaming=False
     )
     

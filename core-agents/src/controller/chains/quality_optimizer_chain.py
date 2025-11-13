@@ -20,7 +20,7 @@ def quality_optimizer_agent(state):
     
     llm = ChatOpenAI(
         model_name=OpenAIModel.GPT_4_OMNI_MINI.value, 
-        temperature=0.5,  # Balanced for optimization
+        temperature=0,  # Balanced for optimization
         streaming=False
     )
     

@@ -15,7 +15,7 @@ def content_strategist_agent(state):
     
     llm = ChatOpenAI(
         model_name=OpenAIModel.GPT_4_OMNI_MINI.value, 
-        temperature=0.7, 
+        temperature=0, 
         streaming=False
     )
     
